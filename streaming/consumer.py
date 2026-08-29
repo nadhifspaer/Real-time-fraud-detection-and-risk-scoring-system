@@ -25,6 +25,16 @@ def init_db(db_path: str = DB_PATH) -> sqlite3.Connection:
         )
         """
     )
+    conn.execute(
+        """
+        CREATE TABLE IF NOT EXISTS account_risk (
+            nameOrig TEXT PRIMARY KEY,
+            cumulative_risk REAL NOT NULL DEFAULT 0,
+            transaction_count INTEGER NOT NULL DEFAULT 0,
+            last_scored_at TEXT NOT NULL
+        )
+        """
+    )
     conn.commit()
     return conn
 
@@ -51,12 +61,25 @@ def consume(
 
         response = requests.post(api_url, json=transaction, timeout=10)
         response.raise_for_status()
-        fraud_score = response.json()["fraud_score"]
+        result = response.json()
+        fraud_score = result["fraud_score"]
+        exposure = result["risk_score"]
         scored_at = time.strftime("%Y-%m-%dT%H:%M:%S")
 
         conn.execute(
             "INSERT OR REPLACE INTO scored_transactions (transaction_id, score, scored_at) VALUES (?, ?, ?)",
             (transaction_id, fraud_score, scored_at),
+        )
+        conn.execute(
+            """
+            INSERT INTO account_risk (nameOrig, cumulative_risk, transaction_count, last_scored_at)
+            VALUES (?, ?, 1, ?)
+            ON CONFLICT(nameOrig) DO UPDATE SET
+                cumulative_risk = cumulative_risk + excluded.cumulative_risk,
+                transaction_count = transaction_count + 1,
+                last_scored_at = excluded.last_scored_at
+            """,
+            (transaction["nameOrig"], exposure, scored_at),
         )
         conn.commit()
 

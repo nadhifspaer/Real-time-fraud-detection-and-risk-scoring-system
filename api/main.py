@@ -8,7 +8,7 @@ from prometheus_client import CONTENT_TYPE_LATEST, Counter, Histogram, generate_
 from pydantic import BaseModel
 
 from src.explainability import explain_transaction
-from src.score_pipeline import _get_model, _prepare_features, score
+from src.score_pipeline import _get_model, _prepare_features, risk_score, score
 
 app = FastAPI()
 
@@ -41,12 +41,14 @@ def predict(transaction: Transaction):
     try:
         payload = transaction.model_dump()
         fraud_score = score(payload)
+        exposure = risk_score(payload, fraud_score)
         model = _get_model()
         X = _prepare_features(model, payload)
         explanation = explain_transaction(model, X, top_n=5)
         REQUEST_COUNT.labels(status="success").inc()
         return {
             "fraud_score": fraud_score,
+            "risk_score": exposure,
             "explanation": explanation.to_dict(orient="records"),
         }
     except Exception:

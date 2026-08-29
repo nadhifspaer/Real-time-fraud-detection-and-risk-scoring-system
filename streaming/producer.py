@@ -1,4 +1,4 @@
-# Kafka producer, replays held-out test-split transactions at a configurable rate
+# Kafka producer, replays held out test/split transactions at a configurable rate
 
 import argparse
 import json
@@ -19,7 +19,7 @@ DATA_PATH = os.path.join(REPO_ROOT, "data", "paysim_transactions.csv")
 
 
 def load_test_transactions(data_path: str = DATA_PATH) -> pd.DataFrame:
-    # held-out test split only, same cutoff used at training time
+    # held out test split only, same cutoff used at training time
     df = pd.read_csv(data_path)
     _, test = temporal_split(df, train_frac=0.8)
     return test

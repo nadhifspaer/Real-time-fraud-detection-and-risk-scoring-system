@@ -1,4 +1,4 @@
-# Streamlit app, cloud (in-process scoring) or local (live scored-transaction feed)
+# Streamlit app
 
 import lightgbm
 import os
@@ -13,7 +13,7 @@ REPO_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, REPO_ROOT)
 
 from src.explainability import explain_transaction
-from src.score_pipeline import _get_model, _prepare_features, score
+from src.score_pipeline import _get_model, _prepare_features, risk_score, score
 
 APP_MODE = os.environ.get("APP_MODE", "cloud")
 DATA_PATH = os.path.join(REPO_ROOT, "data", "paysim_transactions.csv")
@@ -39,9 +39,11 @@ def render_header(subtitle: str):
     st.caption(subtitle)
 
 
-def render_score_panel(fraud_score: float, explanation: pd.DataFrame):
+def render_score_panel(fraud_score: float, exposure: float, explanation: pd.DataFrame):
     # shared score display, both modes
-    st.metric("Fraud score", f"{fraud_score:.4f}")
+    col1, col2 = st.columns(2)
+    col1.metric("Fraud score", f"{fraud_score:.4f}")
+    col2.metric("Risk score", f"{exposure:.2f}")
     fig = px.bar(
         explanation.sort_values("shap_value"),
         x="shap_value",
@@ -54,7 +56,7 @@ def render_score_panel(fraud_score: float, explanation: pd.DataFrame):
 
 @st.cache_resource
 def load_sample_transactions(n: int = 5000) -> pd.DataFrame:
-    # small bounded read, standalone cloud mode never loads the full dataset
+    # small bounded read
     return pd.read_csv(DATA_PATH, nrows=n)
 
 
@@ -83,10 +85,11 @@ def run_cloud_mode():
 
     if st.button("score transaction"):
         fraud_score = score(transaction)
+        exposure = risk_score(transaction, fraud_score)
         model = _get_model()
         X = _prepare_features(model, transaction)
         explanation = explain_transaction(model, X, top_n=5)
-        render_score_panel(fraud_score, explanation)
+        render_score_panel(fraud_score, exposure, explanation)
 
 
 def run_local_mode():
@@ -104,6 +107,13 @@ def run_local_mode():
             "SELECT * FROM scored_transactions ORDER BY scored_at DESC LIMIT 50",
             conn,
         )
+        try:
+            top_accounts = pd.read_sql_query(
+                "SELECT * FROM account_risk ORDER BY cumulative_risk DESC LIMIT 10",
+                conn,
+            )
+        except sqlite3.OperationalError:
+            top_accounts = pd.DataFrame()
         conn.close()
 
         if feed.empty:
@@ -119,6 +129,15 @@ def run_local_mode():
         st.plotly_chart(fig, width='stretch')
 
         st.dataframe(feed, width='stretch')
+
+        st.subheader("Top accounts by accumulated risk")
+        st.caption(
+            "Account identifiers in this dataset behave as near-unique IDs, "
+            "so this table will show few or no repeat accounts on a typical "
+            "replay. That reflects a characteristic of the simulated "
+            "dataset, not a defect in the accumulation logic."
+        )
+        st.dataframe(top_accounts, width='stretch')
 
     live_feed()
 

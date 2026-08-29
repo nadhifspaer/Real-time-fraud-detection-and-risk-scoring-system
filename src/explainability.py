@@ -15,7 +15,7 @@ VELOCITY_FEATURES = [
 
 
 def _align_columns(model, X: pd.DataFrame) -> pd.DataFrame:
-    # drop split-only column, match training column order
+    # drop split only column, match training column order
     X = X.drop(columns=["step"], errors="ignore")
     return X[list(model.feature_name_)]
 

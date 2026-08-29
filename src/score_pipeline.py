@@ -31,3 +31,8 @@ def score(transaction: dict) -> float:
     model = _get_model()
     X = _prepare_features(model, transaction)
     return float(model.predict_proba(X)[:, 1][0])
+
+
+def risk_score(transaction: dict, fraud_score: float) -> float:
+    # expected dollar exposure, fraud_score times transaction amount
+    return fraud_score * float(transaction["amount"])
