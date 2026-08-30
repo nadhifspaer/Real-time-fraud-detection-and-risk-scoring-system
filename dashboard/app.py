@@ -56,8 +56,9 @@ def render_score_panel(fraud_score: float, exposure: float, explanation: pd.Data
 
 @st.cache_resource
 def load_sample_transactions(n: int = 5000) -> pd.DataFrame:
-    # small bounded read
-    return pd.read_csv(DATA_PATH, nrows=n)
+    # cloud mode only, reads the bundled sample since the full dataset is not deployed
+    sample_path = os.path.join(REPO_ROOT, "data", "paysim_sample.csv")
+    return pd.read_csv(sample_path, nrows=n)
 
 
 def run_cloud_mode():
@@ -65,8 +66,8 @@ def run_cloud_mode():
     render_header("cloud mode, in-process scoring")
 
     pool = load_sample_transactions()
-    fraud_rows = pool[pool["isFraud"] == 1].sample(3, random_state=1)
-    legit_rows = pool[pool["isFraud"] == 0].sample(7, random_state=1)
+    fraud_rows = pool[pool["isFraud"] == 1].sample(9, random_state=1)
+    legit_rows = pool[pool["isFraud"] == 0].sample(21, random_state=1)
     sample = pd.concat([fraud_rows, legit_rows])
     labels = [
         f"row {i}: step {r.step}, amount {r.amount:.2f}, isFraud={r.isFraud}"
