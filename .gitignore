@@ -1,10 +1,6 @@
-README.md
-CLAUDE.md
-architecture.md
-reports/business_impact.md
-reports/model_evaluation.md
 data/paysim_transactions.csv
 models/*.joblib
 __pycache__/
 *.pyc
 scored_transactions.db
+*.db-journal
