@@ -6,8 +6,6 @@ This project scores e-wallet transactions for fraud risk using the PaySim simula
 
 The core of the system is a single tabular LightGBM classifier. SHAP explains each score the classifier produces, so a flagged transaction comes with a reason attached, not just a number. That scoring logic is served two ways from one codebase: a FastAPI service exposes it as a live endpoint, a Kafka producer and consumer pipeline replays transactions through that endpoint and streams the results into a shared store, and a Streamlit dashboard displays the outcome either by loading the model directly or by reading that live store. Docker Compose brings the full local stack up as one unit, and Prometheus and Grafana watch the API's request rate, latency, and error rate while it runs.
 
-[Placeholder: conclusion to be added once the rest of the project is finalized.]
-
 **Goals**
 
 1. Catch a high share of fraud while keeping false positives low enough to stay within a realistic daily review capacity.
@@ -56,7 +54,7 @@ Cloud mode loads the trained model directly inside the app process and scores tr
 
 Local mode is part of a full local stack: a FastAPI service exposing the scoring model, a Kafka producer replaying held-out transactions, a Kafka consumer scoring each one through the API and writing results to a shared store, and the dashboard reading that store on a short interval to show a live-updating view. Prometheus and Grafana provide request rate, latency, and error rate visibility into the API. This full stack runs through a single Docker Compose file and is local-only by design.
 
-[Live demo link: pending Stage 6.3 deployment]
+Live demo link: https://real-time-fraud-detection-and-risk-scoring-system-p5bn7gemlte7.streamlit.app/
 
 ## Setup
 
